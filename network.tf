@@ -35,7 +35,7 @@ resource "aws_default_security_group" "ts_fe_sg" {
   vpc_id = aws_vpc.ts_vpc.id
 
   ingress {
-    protocol  = http
+    protocol  = "http"
     self      = true
     from_port = 80
     to_port   = 80
@@ -54,7 +54,7 @@ resource "aws_default_security_group" "ts_be_sg" {
   vpc_id = aws_vpc.ts_vpc.id
 
   ingress {
-    protocol  = tcp
+    protocol  = "tcp"
     self      = true
     from_port = 443
     to_port   = 443
@@ -72,7 +72,7 @@ resource "aws_default_security_group" "ts_db_sg" {
   vpc_id = aws_vpc.ts_vpc.id
 
   ingress {
-    protocol  = tcp
+    protocol  = "tcp"
     self      = true
     from_port = 33006
     to_port   = 3306
@@ -101,7 +101,7 @@ resource "aws_route_table" "ts_public_rt" {
   vpc_id = aws_vpc.ts_vpc.id
 
   route {
-    cidr_block = "10.0.1.0/16"
+    cidr_block = "10.0.0.0/16"
     gateway_id = aws_internet_gateway.ts_gw.id
   }
 
@@ -118,10 +118,10 @@ resource "aws_route_table" "ts_public_rt" {
 resource "aws_route_table" "ts_private_rt" {
   vpc_id = aws_vpc.ts_vpc.id
 
-  route {
-    cidr_block = "10.0.2.0/16"
-    gateway_id = "local"
-  }
+  # route {
+  #   cidr_block = "10.0.2.0/16"
+  #   gateway_id = "local"
+  # }
 
 #   route {
 #     ipv6_cidr_block        = "::/0"
@@ -137,10 +137,10 @@ resource "aws_route_table" "ts_private_rt" {
 resource "aws_route_table" "ts_database_rt" {
   vpc_id = aws_vpc.ts_vpc.id
 
-  route {
-    cidr_block = "10.0.3.0/16"
-    gateway_id = "local"
-  }
+  # route {
+  #   cidr_block = "10.0.3.0/16"
+  #   gateway_id = "local"
+  # }
 
   tags = {
     Name = "Ts-Database-rt"
@@ -185,7 +185,7 @@ resource "aws_default_security_group" "public_server" {
   vpc_id = aws_vpc.ts_vpc.id
 
   ingress {
-    protocol  = tcp
+    protocol  = "tcp"
     self      = true
     from_port = 80
     to_port   = 80
@@ -203,7 +203,7 @@ resource "aws_default_security_group" "private_server" {
   vpc_id = aws_vpc.ts_vpc.id
 
   ingress {
-    protocol  = tcp
+    protocol  = "tcp"
     self      = true
     from_port = 443
     to_port   = 443
@@ -221,7 +221,7 @@ resource "aws_default_security_group" "database_server" {
   vpc_id = aws_vpc.ts_vpc.id
 
   ingress {
-    protocol  = tcp
+    protocol  = "tcp"
     self      = true
     from_port = 3306
     to_port   = 3306
