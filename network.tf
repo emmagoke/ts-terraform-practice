@@ -89,7 +89,7 @@ resource "aws_default_security_group" "ts_db_sg" {
 
 
 resource "aws_internet_gateway" "ts_gw" {
-  vpc_id = aws_vpc.ts_vpc
+  vpc_id = aws_vpc.ts_vpc.id
 
   tags = {
     Name = "main"

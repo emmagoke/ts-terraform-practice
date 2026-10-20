@@ -36,7 +36,7 @@ resource "aws_instance" "ts_backend_server" {
 
 resource "aws_db_subnet_group" "ts_rds_subnet" {
   name       = "my-ts-database-subnet-group"
-  subnet_ids = [aws_subnet.ts_private_subnet.id, aws_subnet.ts_database_subnet]
+  subnet_ids = [aws_subnet.ts_private_subnet.id, aws_subnet.ts_database_subnet.id]
 
   tags = {
     Name = "My DB subnet group"
