@@ -104,15 +104,15 @@ resource "aws_internet_gateway" "ts_gw" {
 
 
 # Elastic Ip Address
-# resource "aws_eip" "ts_nat_eip" {
-#   domain     = "vpc"
-#   depends_on = [aws_internet_gateway.ts_gw]
-# }
+resource "aws_eip" "ts_nat_eip" {
+  domain     = "vpc"
+  depends_on = [aws_internet_gateway.ts_gw]
+}
 
 
 // Allows internet into the public subnet
 resource "aws_nat_gateway" "ts_nat_gateway" {
-  # allocation_id = aws_eip.ts_nat_eip.id
+  allocation_id = aws_eip.ts_nat_eip.id
   subnet_id     = aws_subnet.ts_public_subnet.id
 
   tags = {
