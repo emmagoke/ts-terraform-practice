@@ -4,7 +4,7 @@ resource "aws_vpc" "ts_vpc" {
 
 resource "aws_subnet" "ts_public_subnet" {
   vpc_id     = aws_vpc.ts_vpc.id
-  cidr_block = "10.0.1.0/24"
+  cidr_block = "10.0.0.0/24"
 
   tags = {
     Name = "ts-public"
@@ -22,7 +22,7 @@ resource "aws_subnet" "ts_private_subnet" {
 
 resource "aws_subnet" "ts_database_subnet" {
   vpc_id     = aws_vpc.ts_vpc.id
-  cidr_block = "10.0.1.0/24"
+  cidr_block = "10.0.2.0/24"
 
   tags = {
     Name = "ts_database"
@@ -101,7 +101,7 @@ resource "aws_route_table" "ts_public_rt" {
   vpc_id = aws_vpc.ts_vpc.id
 
   route {
-    cidr_block = "10.0.0.0/16"
+    cidr_block = "10.0.0.0/24"
     gateway_id = aws_internet_gateway.ts_gw.id
   }
 
@@ -118,10 +118,10 @@ resource "aws_route_table" "ts_public_rt" {
 resource "aws_route_table" "ts_private_rt" {
   vpc_id = aws_vpc.ts_vpc.id
 
-  # route {
-  #   cidr_block = "10.0.2.0/16"
-  #   gateway_id = "local"
-  # }
+  route {
+    cidr_block = "10.0.1.0/24"
+    gateway_id = "local"
+  }
 
 #   route {
 #     ipv6_cidr_block        = "::/0"
@@ -169,7 +169,7 @@ resource "aws_route_table_association" "ts_database_association" {
 // Allows internet into the public subnet
 resource "aws_nat_gateway" "ts_nat_gateway" {
 #   allocation_id = aws_eip.example.id
-  subnet_id     = aws_subnet.ts_public_subnet
+  subnet_id     = aws_subnet.ts_public_subnet.id
 
   tags = {
     Name = "gw NAT"
