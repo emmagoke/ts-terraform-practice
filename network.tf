@@ -2,6 +2,10 @@ resource "aws_vpc" "ts_vpc" {
   cidr_block = "10.0.0.0/16"
 }
 
+################################
+# ---------- Subnets ----------#
+################################
+
 resource "aws_subnet" "ts_public_subnet" {
   vpc_id     = aws_vpc.ts_vpc.id
   cidr_block = "10.0.0.0/24"
@@ -31,62 +35,64 @@ resource "aws_subnet" "ts_database_subnet" {
 
 
 
-resource "aws_default_security_group" "ts_fe_sg" {
-  vpc_id = aws_vpc.ts_vpc.id
+# resource "aws_default_security_group" "ts_fe_sg" {
+#   vpc_id = aws_vpc.ts_vpc.id
 
-  ingress {
-    protocol  = "http"
-    self      = true
-    from_port = 80
-    to_port   = 80
-  }
+#   ingress {
+#     protocol  = "http"
+#     self      = true
+#     from_port = 80
+#     to_port   = 80
+#   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-
-resource "aws_default_security_group" "ts_be_sg" {
-  vpc_id = aws_vpc.ts_vpc.id
-
-  ingress {
-    protocol  = "tcp"
-    self      = true
-    from_port = 443
-    to_port   = 443
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_default_security_group" "ts_db_sg" {
-  vpc_id = aws_vpc.ts_vpc.id
-
-  ingress {
-    protocol  = "tcp"
-    self      = true
-    from_port = 33006
-    to_port   = 3306
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
+#   egress {
+#     from_port   = 0
+#     to_port     = 0
+#     protocol    = "-1"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+# }
 
 
+# resource "aws_default_security_group" "ts_be_sg" {
+#   vpc_id = aws_vpc.ts_vpc.id
+
+#   ingress {
+#     protocol  = "tcp"
+#     self      = true
+#     from_port = 443
+#     to_port   = 443
+#   }
+
+#   egress {
+#     from_port   = 0
+#     to_port     = 0
+#     protocol    = "-1"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+# }
+
+# resource "aws_default_security_group" "ts_db_sg" {
+#   vpc_id = aws_vpc.ts_vpc.id
+
+#   ingress {
+#     protocol  = "tcp"
+#     self      = true
+#     from_port = 33006
+#     to_port   = 3306
+#   }
+
+#   egress {
+#     from_port   = 0
+#     to_port     = 0
+#     protocol    = "-1"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+# }
+
+#################################
+# ---------- Gateways ----------#
+#################################
 
 resource "aws_internet_gateway" "ts_gw" {
   vpc_id = aws_vpc.ts_vpc.id
@@ -97,11 +103,37 @@ resource "aws_internet_gateway" "ts_gw" {
 }
 
 
+# Elastic Ip Address
+# resource "aws_eip" "ts_nat_eip" {
+#   domain     = "vpc"
+#   depends_on = [aws_internet_gateway.ts_gw]
+# }
+
+
+// Allows internet into the public subnet
+resource "aws_nat_gateway" "ts_nat_gateway" {
+  # allocation_id = aws_eip.ts_nat_eip.id
+  subnet_id     = aws_subnet.ts_public_subnet.id
+
+  tags = {
+    Name = "gw NAT"
+  }
+
+  # To ensure proper ordering, it is recommended to add an explicit dependency
+  # on the Internet Gateway for the VPC.
+  depends_on = [aws_internet_gateway.ts_gw]
+}
+
+
+#####################################
+# ---------- Route tables ----------#
+#####################################
+
 resource "aws_route_table" "ts_public_rt" {
   vpc_id = aws_vpc.ts_vpc.id
 
   route {
-    cidr_block = "10.0.0.0/24"
+    cidr_block = "0.0.0.0/0"  // Access to all internet
     gateway_id = aws_internet_gateway.ts_gw.id
   }
 
@@ -119,8 +151,9 @@ resource "aws_route_table" "ts_private_rt" {
   vpc_id = aws_vpc.ts_vpc.id
 
   route {
-    cidr_block = "10.0.1.0/24"
-    gateway_id = "local"
+    # cidr_block = "10.0.1.0/24"
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.ts_nat_gateway.id
   }
 
 #   route {
@@ -163,50 +196,29 @@ resource "aws_route_table_association" "ts_database_association" {
     route_table_id = aws_route_table.ts_database_rt.id
 }
 
-# Elastic Ip Address
+#######################################################################################
+# ---------- Security groups (chain: internet -> frontend -> backend -> db) ----------#
+#######################################################################################
 
-
-// Allows internet into the public subnet
-resource "aws_nat_gateway" "ts_nat_gateway" {
-#   allocation_id = aws_eip.example.id
-  subnet_id     = aws_subnet.ts_public_subnet.id
-
-  tags = {
-    Name = "gw NAT"
-  }
-
-  # To ensure proper ordering, it is recommended to add an explicit dependency
-  # on the Internet Gateway for the VPC.
-  depends_on = [aws_internet_gateway.ts_gw]
-}
-
-
-resource "aws_default_security_group" "public_server" {
+resource "aws_security_group" "public_server" {
+  name   = "ts-frontend-sg"
   vpc_id = aws_vpc.ts_vpc.id
 
   ingress {
+    description = "HTTP from internet"
     protocol  = "tcp"
     self      = true
     from_port = 80
     to_port   = 80
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-}
-
-resource "aws_default_security_group" "private_server" {
-  vpc_id = aws_vpc.ts_vpc.id
 
   ingress {
-    protocol  = "tcp"
-    self      = true
+    description = "HTTPS from internet"
+    protocol = "tcp"
     from_port = 443
-    to_port   = 443
+    to_port = 443
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -217,14 +229,39 @@ resource "aws_default_security_group" "private_server" {
   }
 }
 
-resource "aws_default_security_group" "database_server" {
+resource "aws_security_group" "private_server" {
+  name   = "ts-backend-sg"
   vpc_id = aws_vpc.ts_vpc.id
 
   ingress {
-    protocol  = "tcp"
-    self      = true
-    from_port = 3306
-    to_port   = 3306
+    description     = "From frontend only"
+    protocol        = "tcp"
+    self            = true
+    from_port       = 443
+    to_port         = 443
+    security_groups = [aws_security_group.public_server.id]
+  }
+  
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "database_server" {
+  name   = "ts-database-sg"
+  vpc_id = aws_vpc.ts_vpc.id
+
+  ingress {
+    description     = "MySQL from backend only"
+    protocol        = "tcp"
+    self            = true
+    from_port       = 3306
+    to_port         = 3306
+    security_groups = [aws_security_group.private_server.id]
   }
 
   egress {

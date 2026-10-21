@@ -17,7 +17,8 @@ data "aws_ami" "ubuntu" {
 resource "aws_instance" "ts_frontend_server" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = "t3.micro"
-  vpc_security_group_ids = [aws_default_security_group.public_server.id]
+  subnet_id = aws_subnet.ts_public_subnet.id
+  vpc_security_group_ids = [aws_security_group.public_server.id]
 
   tags = {
     Name = "frontend server"
@@ -27,7 +28,8 @@ resource "aws_instance" "ts_frontend_server" {
 resource "aws_instance" "ts_backend_server" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = "t3.micro"
-  vpc_security_group_ids = [aws_default_security_group.private_server.id]
+  subnet_id = aws_subnet.ts_private_subnet.id
+  vpc_security_group_ids = [aws_security_group.private_server.id]
 
   tags = {
     Name = "backend server"
@@ -45,7 +47,7 @@ resource "aws_db_subnet_group" "ts_rds_subnet" {
 
 
 resource "aws_db_instance" "default" {
-  allocated_storage    = 10
+  allocated_storage    = 20
   db_name              = "my_ts_db"
   engine               = "mysql"
   engine_version       = "8.0"
